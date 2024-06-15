@@ -1,12 +1,12 @@
 import pandas as pd
-import numpy as np
 
 from providers.data_prepare import raw_data, initial_data_prep, final_prepare, feature_scaling, make_n_days
-from providers.make_features import make_lag, make_target
+from providers.make_features import make_lag, make_target, make_lag_shift
 from providers.data_split import train_test_split, x_y_split
-from providers.predict_rows import predict_every_rows
+from providers.predict_rows import predict_every_rows_for_lags
 from ml.models import xgboost_model_fitter
-from ml.prediction import predict_with_model, predict_with_model_one
+from ml.prediction import predict_with_model, predict_with_model_one, predict_close_with_predicted_returns, \
+    calculate_close_with_predicted_returns
 from ml.error_measurement import error_measurement
 
 
@@ -32,7 +32,6 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     # y_pred = predict_with_model_one(model=model, val=X_test_scaled[0])
 
     error = error_measurement(y_pred=y_pred, y_test=y_test)
-    print(f'RMSE is: {error}')
 
     # add n days for predict from last row of data
     raw = raw.iloc[-n_lags:, :]
@@ -45,21 +44,31 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     df_for_predict = make_lag(df=df_for_predict, target_col=target_col, n_lags=n_lags)
     df_for_predict = df_for_predict.iloc[n_lags:, :]
     df_for_predict = make_target(df=df_for_predict, target_col=target_col, shift=shift)
-    x_features = np.array(df_for_predict.iloc[:, :-1])
-    y_features = np.array(df_for_predict.iloc[:, -1])
+    df_for_predict_pre = df_for_predict.iloc[:n_lags, :]
+    df_final = predict_every_rows_for_lags(df=df_for_predict_pre, n_lags=n_lags, model=model,
+                                           predict_one_function=predict_with_model_one, target_col=target_col)
+    new_for_predict = pd.concat([df_final, df_for_predict.iloc[n_lags:, :]], ignore_index=True)
+    new_df = new_for_predict.copy()
+    for i in range(n_lags, len(new_for_predict)):
+        new_df = make_lag_shift(df=new_df, target_col='log_returns', n_lags=n_lags, row=i)
+        x_features = new_df.iloc[i, :-1]
+        new_df.loc[new_df.index[i], 'target'] = predict_with_model_one(model, x_features)
 
-    # print(x_features)
-    # print(y_features)
-    print(df_for_predict.to_string())
-    df_final = predict_every_rows(df=df_for_predict, n_predict=n_predict, n_lags=n_lags, target=target_col, model=model,
-                                  predict_one_function=predict_with_model_one)
-    print(df_final.to_string())
+    output_target = predict_close_with_predicted_returns(base_df=raw, prediction_df=new_df, target_col=target_col,
+                                                         n_predict=n_predict)
+
+    output = calculate_close_with_predicted_returns(df=output_target, target_col=target_col)
+
+    return output, error
 
 
-predict_n_days(data_source='data/dollar.xlsx',
-               target_col='log_returns',
-               n_lags=5,
-               shift=-1,
-               test_perc=0.3,
-               n_predict=30
-               )
+output, error = predict_n_days(data_source='data/dollar.xlsx',
+                               target_col='log_returns',
+                               n_lags=5,
+                               shift=-1,
+                               test_perc=0.3,
+                               n_predict=100
+                               )
+print(error)
+print(output.to_string())
+output.to_excel('output/dollar.xlsx')

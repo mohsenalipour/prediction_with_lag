@@ -1,33 +1,27 @@
 import pandas as pd
 
 
-def predict_every_rows(df, n_predict, n_lags, target, model, predict_one_function):
-    feature_cols = [col for col in df.columns if col != 'target']
-    new_dict = {key: [] for key in feature_cols}
-    new_dict['index'] = []
-    new_dict['target'] = []
+def predict_every_rows_for_lags(df, n_lags, model, predict_one_function, target_col):
+    df_new = df.copy()
+    for i in range(n_lags):
+        x_features = df_new.iloc[i, :-1].values
+        target = predict_one_function(model, x_features)
+        m = i + 1
+        n = 1
+        while m <= n_lags and n <= n_lags:
+            row = m+1
+            col = n
+            # print([row, col])
+            df_new.iloc[i, -1] = target
+            if row <= n_lags:
+                df_new.loc[df_new.index[row-1], [f'lag_{target_col}_{col}']] = target
+            m += 1
+            n += 1
+        # print(target)
 
-    m = 1
-    last_row = {}
-    for index, row in df.iterrows():
-        new_dict['index'].append(m)
-        targets_shift = []
-        if m <= n_lags:
-            empty_cols_number = m - 1
+    return df_new
 
-            if empty_cols_number != 0:
-                # fill blank cols
-                for i in range(1, empty_cols_number+1):
-                    new_dict[f'lag_{target}_{i}'] = targets_shift[-1]
 
-            for col in feature_cols:
-                new_dict[col].append(row[col])
-            predict_target = predict_one_function(model, row[:-1])
-            new_dict['target'].append(predict_target)
-            targets_shift.append(predict_target)
-
-        m += 1
-
-    df_final = pd.DataFrame(new_dict)
-
-    return df_final
+def predict_every_row_after_lags(df, n_lags, model, predict_one_function, target_col):
+    for i in range(n_lags, df.shape[0]):
+        pass
