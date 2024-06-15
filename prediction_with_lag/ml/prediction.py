@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from providers.data_prepare import make_n_days
+from prediction_with_lag.providers.data_prepare import make_n_days
 
 
 def predict_with_model(model, X_test):

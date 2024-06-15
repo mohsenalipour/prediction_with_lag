@@ -1,13 +1,13 @@
 import pandas as pd
 
-from providers.data_prepare import raw_data, initial_data_prep, final_prepare, feature_scaling, make_n_days
-from providers.make_features import make_lag, make_target, make_lag_shift
-from providers.data_split import train_test_split, x_y_split
-from providers.predict_rows import predict_every_rows_for_lags
-from ml.models import xgboost_model_fitter
-from ml.prediction import predict_with_model, predict_with_model_one, predict_close_with_predicted_returns, \
-    calculate_close_with_predicted_returns
-from ml.error_measurement import error_measurement
+from prediction_with_lag.providers.data_prepare import raw_data, initial_data_prep, final_prepare, make_n_days
+from prediction_with_lag.providers.make_features import make_lag, make_target, make_lag_shift
+from prediction_with_lag.providers.data_split import train_test_split, x_y_split
+from prediction_with_lag.providers.predict_rows import predict_every_rows_for_lags
+from prediction_with_lag.ml.models import xgboost_model_fitter
+from prediction_with_lag.ml.prediction import predict_with_model, predict_with_model_one,\
+    predict_close_with_predicted_returns, calculate_close_with_predicted_returns
+from prediction_with_lag.ml.error_measurement import error_measurement
 
 
 def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict, day_as_feature=True):
