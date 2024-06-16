@@ -3,7 +3,7 @@ def train_test_split(data, test_perc):
     n = int(len(data) * (1 - test_perc))
     train_data = data[:n]
     test_data = data[n:]
-    return train_data, test_data
+    return train_data, test_data, len(data) - n
 
 
 def x_y_split(train_data, test_data, x_columns: list, y_column: int):

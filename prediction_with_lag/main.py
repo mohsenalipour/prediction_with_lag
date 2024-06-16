@@ -1,17 +1,25 @@
 import pandas as pd
+import numpy as np
 
 from prediction_with_lag.providers.data_prepare import raw_data, initial_data_prep, final_prepare, make_n_days
 from prediction_with_lag.providers.make_features import make_lag, make_target, make_lag_shift
 from prediction_with_lag.providers.data_split import train_test_split, x_y_split
 from prediction_with_lag.providers.predict_rows import predict_every_rows_for_lags
+from prediction_with_lag.providers.plot import plot
 from prediction_with_lag.ml.models import xgboost_model_fitter
-from prediction_with_lag.ml.prediction import predict_with_model, predict_with_model_one,\
+from prediction_with_lag.ml.prediction import predict_with_model, predict_with_model_one, \
     predict_close_with_predicted_returns, calculate_close_with_predicted_returns
 from prediction_with_lag.ml.error_measurement import error_measurement
 
 
 def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict, day_as_feature=True):
     raw = raw_data(xlsx_file=data_source)
+
+    # make for plot
+    first_df = raw.copy()
+    first_df.set_index('Date', inplace=True, drop=True)
+    first_df = first_df.loc[:, ['Close', target_col]]
+
     initial_data = raw.copy()
     data = initial_data_prep(df=initial_data, day_as_feature=day_as_feature)
     data = make_lag(df=data, target_col=target_col, n_lags=n_lags)
@@ -19,7 +27,7 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     data = final_prepare(df=data)
     n_columns = data.shape[1]
     # print(data.to_string())
-    train, test = train_test_split(data=data, test_perc=test_perc)
+    train, test, n_train = train_test_split(data=data, test_perc=test_perc)
     X_train, y_train, X_test, y_test = x_y_split(train_data=train, test_data=test,
                                                  x_columns=[i for i in range(n_columns - 1)],
                                                  y_column=-1)
@@ -32,6 +40,20 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     # y_pred = predict_with_model_one(model=model, val=X_test_scaled[0])
 
     error = error_measurement(y_pred=y_pred, y_test=y_test)
+
+    # for make plot
+    test_dates = first_df.index[-(n_train + 1):]
+    first_close = first_df['Close'].iloc[-(n_train + 1)]
+    # all_close = [first_close].extend(*np.array(n_train * np.nan))
+    all_close = [np.nan] * n_train
+    all_close.insert(0, first_close)
+    all_y_pred = y_pred.tolist()
+    all_y_pred.insert(0, np.nan)
+    test_dict = {'Date': test_dates, 'Close': all_close, 'log_returns': all_y_pred}
+    test_df = pd.DataFrame(test_dict)
+    test_df.set_index('Date', inplace=True, drop=True)
+    test_df_plot = calculate_close_with_predicted_returns(df=test_df, target_col=target_col)
+    test_df_plot.rename(columns={'Close': 'Close_test', target_col: f'{target_col}_test'}, inplace=True)
 
     # add n days for predict from last row of data
     raw = raw.iloc[-n_lags:, :]
@@ -57,18 +79,26 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     output_target = predict_close_with_predicted_returns(base_df=raw, prediction_df=new_df, target_col=target_col,
                                                          n_predict=n_predict)
 
-    output = calculate_close_with_predicted_returns(df=output_target, target_col=target_col)
+    output = calculate_close_with_predicted_returns(df=output_target, target_col=target_col).iloc[n_lags:, :]
+    output_plot = output.copy()
+    output_plot.rename(columns={'Close': 'Close_predict', target_col: f'{target_col}_predict'}, inplace=True)
+    # print(first_df.to_string())
 
-    return output, error
+    df_plot = pd.concat([first_df, test_df_plot, output_plot], axis=1)
+
+    return output, error, first_df, test_df_plot, output_plot, df_plot
 
 
-output, error = predict_n_days(data_source='data/dollar.xlsx',
-                               target_col='log_returns',
-                               n_lags=5,
-                               shift=-1,
-                               test_perc=0.3,
-                               n_predict=100
-                               )
+output, error, first_df, test_df_plot, output_plot, df_plot = predict_n_days(data_source='data/dollar.xlsx',
+                                                                             target_col='log_returns',
+                                                                             n_lags=7,
+                                                                             shift=-1,
+                                                                             test_perc=0.3,
+                                                                             n_predict=100
+                                                                             )
 print(error)
-print(output.to_string())
-output.to_excel('output/dollar.xlsx')
+# print(df_plot.to_string())
+
+plot(df_plot, col_to_plot=['Close', 'Close_test', 'Close_predict'], n_lags=7)
+
+# output.to_excel('output/dollar.xlsx')
