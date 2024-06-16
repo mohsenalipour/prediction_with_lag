@@ -99,6 +99,6 @@ output, error, first_df, test_df_plot, output_plot, df_plot = predict_n_days(dat
 print(error)
 # print(df_plot.to_string())
 
-plot(df_plot, col_to_plot=['Close', 'Close_test', 'Close_predict'], n_lags=7)
+plot(df_plot, col_to_plot=['Close', 'Close_test'], n_lags=7)
 
 # output.to_excel('output/dollar.xlsx')
