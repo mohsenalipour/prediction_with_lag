@@ -15,7 +15,10 @@ def initial_data_prep(df, day_as_feature=True, in_pred=False):
         df['Day'] = df.Date.astype(str).str[8:10].astype(float)
         df['Month'] = df.Date.astype(str).str[6:7].astype(float)
         df['Year'] = df.Date.astype(str).str[0:4].astype(float)
-    df.drop(['Date', 'Open', 'High', 'Low', 'Close', 'Weekday', 'simple_returns', 'Ticker'], axis=1, inplace=True)
+    # df.drop(['Date', 'Open', 'High', 'Low', 'Close', 'Weekday', 'simple_returns', 'Ticker'], axis=1, inplace=True)
+        df = df.loc[:, ['Day', 'Month', 'Year', 'log_returns']]
+    else:
+        df = df.loc[:, ['log_returns']]
     if not in_pred:
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.dropna(inplace=True)

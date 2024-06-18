@@ -89,16 +89,24 @@ def predict_n_days(data_source, target_col, n_lags, shift, test_perc, n_predict,
     return output, error, first_df, test_df_plot, output_plot, df_plot
 
 
-output, error, first_df, test_df_plot, output_plot, df_plot = predict_n_days(data_source='data/dollar.xlsx',
-                                                                             target_col='log_returns',
-                                                                             n_lags=7,
-                                                                             shift=-1,
-                                                                             test_perc=0.3,
-                                                                             n_predict=100
+asset_name = 'dollar'
+data_source = f'data/{asset_name}.xlsx'
+target_col = 'log_returns'
+n_lags = 7
+shift = -1
+test_perc = 0.3
+n_predict = 100
+
+
+output, error, first_df, test_df_plot, output_plot, df_plot = predict_n_days(data_source=data_source,
+                                                                             target_col=target_col,
+                                                                             n_lags=n_lags,
+                                                                             shift=shift,
+                                                                             test_perc=test_perc,
+                                                                             n_predict=n_predict,
                                                                              )
 print(error)
 # print(df_plot.to_string())
 
-plot(df_plot, col_to_plot=['Close', 'Close_test'], n_lags=7)
-
+plot(df_plot, col_to_plot=['Close', 'Close_test'], error=error, n_lags=n_lags, save_file_name=asset_name, n_perc=0.4)
 # output.to_excel('output/dollar.xlsx')
